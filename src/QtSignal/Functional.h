@@ -14,6 +14,9 @@
 namespace std {
 
 #if !defined(_MSC_VER)
+
+#define _NOEXCEPT noexcept
+
 template <std::size_t N>
 struct _Ph {};
 
@@ -130,7 +133,7 @@ inline binder<Func, Ret, Args...> bind(Func && func, Args && ...args) {
 // See: http://stackoverflow.com/questions/18039723/c-trying-to-get-function-address-from-a-stdfunction
 //
 template <typename Ret, typename ...Args>
-inline size_t getAddressOf(std::function<Ret(Args...)> func) _NOEXCEPT {
+static inline size_t getAddressOf(std::function<Ret(Args...)> func) _NOEXCEPT {
     typedef Ret(funcType)(Args...);
     printf("Ret = %s\n", typeid(Ret).name());
     printf("funcType = %s\n", typeid(funcType).name());
@@ -142,7 +145,7 @@ inline size_t getAddressOf(std::function<Ret(Args...)> func) _NOEXCEPT {
 }
 
 template <typename Ret, typename ...Args>
-bool function_equal(std::function<Ret(Args...)> const & func1, std::function<Ret(Args...)> const & func2) _NOEXCEPT {
+static bool function_equal(std::function<Ret(Args...)> const & func1, std::function<Ret(Args...)> const & func2) _NOEXCEPT {
     typedef Ret(FuncType)(Args...);
     size_t sizeArgs = sizeof...(Args);
     Ret(* const * ptr1)(Args...) = func1.target<Ret(*)(Args...)>();
@@ -152,7 +155,7 @@ bool function_equal(std::function<Ret(Args...)> const & func1, std::function<Ret
 }
 
 template <typename T, typename ...Args>
-bool function_equal(std::function<void(Args...)> const & func1, std::function<void(Args...)> const & func2) _NOEXCEPT {
+static bool function_equal(std::function<void(Args...)> const & func1, std::function<void(Args...)> const & func2) _NOEXCEPT {
     bool is_equal = false;
     static constexpr size_t sizeArgs = sizeof...(Args);
     //typedef void(cdecl T::*MemberFnType)(T *, Args...);
@@ -182,7 +185,7 @@ bool function_equal(std::function<void(Args...)> const & func1, std::function<vo
 }
 
 template <typename T, typename Ret, typename ...Args>
-bool function_equal(std::function<Ret(Args...)> const & func1, std::function<Ret(Args...)> const & func2) _NOEXCEPT {
+static bool function_equal(std::function<Ret(Args...)> const & func1, std::function<Ret(Args...)> const & func2) _NOEXCEPT {
     bool is_equal = false;
     static constexpr size_t sizeArgs = sizeof...(Args);
     {
