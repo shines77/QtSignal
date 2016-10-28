@@ -13,13 +13,26 @@
 #include <tuple>
 #include <type_traits>
 
-#include "QtSignal.h"
+#include "Signal.h"
+#include "SignalStub.h"
 #include "Functional.h"
 
 enum signal_slots {
     OnValueChange,
     OnScrollChange
 };
+
+template <typename R, typename ...Args>
+inline bool operator == (std::function<R(Args...)> const & func1, std::function<R(Args...)> const & func2) _NOEXCEPT {
+    R (* const * ptr1)(Args...) = func1.template target<R(*)(Args...)>();
+    R (* const * ptr2)(Args...) = func2.template target<R(*)(Args...)>();
+    return ((ptr1 != nullptr) && (ptr2 != nullptr) && (ptr1 == ptr2));
+}
+
+template <typename R, typename ...Args>
+inline bool operator == (std::function<R(Args...)> && func1, std::function<R(Args...)> && func2) _NOEXCEPT {
+    return true;
+}
 
 class FooA {
 public:
@@ -45,31 +58,27 @@ public:
     }
 };
 
-template <typename R, typename ...Args>
-inline bool operator == (std::function<R(Args...)> const & func1, std::function<R(Args...)> const & func2) _NOEXCEPT {
-    R (* const * ptr1)(Args...) = func1.template target<R(*)(Args...)>();
-    R (* const * ptr2)(Args...) = func2.template target<R(*)(Args...)>();
-    return ((ptr1 != nullptr) && (ptr2 != nullptr) && (ptr1 == ptr2));
-}
-
-/*
-template <typename R, typename ...Args>
-inline bool operator == (std::function<R(Args...)> && func1, std::function<R(Args...)> && func2) _NOEXCEPT {
-    return true;
-}
-//*/
-
 void test_signal()
 {
     using namespace std::placeholders;
-    typedef jimi::signal<> signal_0;
+
+    FooA a; FooB b;
+    auto binder1  = jimi::bind(&FooA::onValueChange, &a, _1);
+    auto binder1_ = jimi::bind(&FooA::onValueChange, &a, _1);
+    //auto binder2  = jimi::bind(&FooB::onValueChange, &b, _1);
+}
+
+void test_signal_stub()
+{
+    using namespace std::placeholders;
+    typedef jimi::signal_stub<> signal_0;
     signal_0 & signal_0_inst = signal_0::get();
 
     signal_0_inst.connect(signal_slots::OnValueChange, []() { std::cout << "lambda::onValueChange()." << std::endl; });
     signal_0_inst.emit(signal_slots::OnValueChange);
     signal_0_inst.disconnect(signal_slots::OnValueChange);
 
-    typedef jimi::signal<int> signal_int;
+    typedef jimi::signal_stub<int> signal_int;
     signal_int & signal_int_inst = signal_int::get();
 
     FooA a; FooB b;
@@ -97,7 +106,7 @@ void test_signal()
 
 void run_unittest()
 {
-    //
+    // TODO:
 }
 
 int main(int argn, char * argv[])
@@ -107,6 +116,7 @@ int main(int argn, char * argv[])
 #endif
 
     test_signal();
+    test_signal_stub();
 
 #if defined(_WIN32) && (defined(NDEBUG) || !defined(NDEBUG))
     system("pause");

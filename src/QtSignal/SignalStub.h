@@ -1,21 +1,21 @@
-#ifndef QT_SIGNAL_H
-#define QT_SIGNAL_H
+#ifndef QT_SIGNAL_STUB_H
+#define QT_SIGNAL_STUB_H
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1020)
 #pragma once
 #endif
 
-#include "QtSignalImpl.h"
+#include "SignalStubImpl.h"
 
 namespace jimi {
 
 template <typename ...Args>
-class signal
+class signal_stub
 {
 public:
-	static signal & get()
+	static signal_stub & get()
 	{
-		static signal instance;
+		static signal_stub instance;
 		return instance;
 	}
 
@@ -36,20 +36,20 @@ public:
 	}
 
 private:
-	signal() = default;
-	signal(const signal &) = delete;
-	signal(signal &&) = delete;
+	signal_stub() = default;
+	signal_stub(const signal_stub &) = delete;
+	signal_stub(signal_stub &&) = delete;
 
-	safe_signal_impl<void(Args...)> signal_;
+	safe_signal_stub_impl<void(Args...)> signal_;
 };
 
 template <typename ...Args>
-class unsafe_signal
+class unsafe_signal_stub
 {
 public:
-	static unsafe_signal & get()
+	static unsafe_signal_stub & get()
 	{
-		static unsafe_signal instance;
+		static unsafe_signal_stub instance;
 		return instance;
 	}
 
@@ -70,13 +70,13 @@ public:
 	}
 
 private:
-	unsafe_signal() = default;
-	unsafe_signal(const unsafe_signal &) = delete;
-	unsafe_signal(unsafe_signal &&) = delete;
+	unsafe_signal_stub() = default;
+	unsafe_signal_stub(const unsafe_signal_stub &) = delete;
+	unsafe_signal_stub(unsafe_signal_stub &&) = delete;
 
-	unsafe_signal_impl<void(Args...)> signal_;
+	unsafe_signal_stub_impl<void(Args...)> signal_;
 };
 
 } // namespace jimi
 
-#endif // !QT_SIGNAL_H
+#endif // !QT_SIGNAL_STUB_H

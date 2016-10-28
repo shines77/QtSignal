@@ -10,10 +10,19 @@
     <ClInclude Include="..\..\..\src\QtSignal\Functional.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\QtSignal\QtSignal.h">
+    <ClInclude Include="..\..\..\src\QtSignal\SignalStub.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\QtSignal\QtSignalImpl.h">
+    <ClInclude Include="..\..\..\src\QtSignal\SignalStubImpl.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\QtSignal\Signal.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\QtSignal\SignalImpl.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\QtSignal\SignalCommon.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
