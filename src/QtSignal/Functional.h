@@ -35,6 +35,7 @@ class _Binder : public std::_Binder<_Ret, _Fx, _Types...>
 
 namespace jimi {
 
+#if 0
 // Convert array into a tuple
 template <typename Array, std::size_t ...I>
 decltype(auto) make_args_tuple_impl(Array & arr, std::index_sequence<I...>)
@@ -50,6 +51,7 @@ decltype(auto) make_args_tuple(std::array<T, N> & arr)
 {
     return make_args_tuple_impl(arr, Indices());
 }
+#endif
 
 /*
 template <std::size_t ...I, std::size_t N, typename T, typename ...Args>
@@ -167,7 +169,7 @@ bool function_equal(std::function<void(Args...)> const & func1, std::function<vo
         return is_equal;
     {
         std::array<void *, sizeArgs> arr = { 0 };
-        auto tuple_list = make_args_tuple(arr);
+        //auto tuple_list = make_args_tuple(arr);
         typedef void(cdecl T::*MemberFnType)(Args...);
         // decltype(template make_args_tuple<sizeArgs>())
         typedef std::_Binder<std::_Unforced, MemberFnType, T *, std::tuple<Args...>> BindType;
@@ -194,7 +196,7 @@ bool function_equal(std::function<Ret(Args...)> const & func1, std::function<Ret
         return is_equal;
     {
         std::array<void *, sizeArgs> arr = { 0 };
-        auto tuple_list = template make_args_tuple(arr);
+        //auto tuple_list = template make_args_tuple(arr);
         typedef Ret(cdecl T::*MemberFnType)(Args...);
         typedef std::_Binder<Ret, MemberFnType, T *, Args...> BindType;
         printf("BindType = %s\n", typeid(BindType).name());
