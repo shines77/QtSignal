@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-project(qtsignal)
+project(QtSignal)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
@@ -49,10 +49,10 @@ include_directories(src)
 include_directories(src/QtSignal)
 
 set(SOURCE_FILES 
-    src/ConcurrentQueue/QtSignal.h
-    src/ConcurrentQueue/QtSignalImpl.h
-    src/ConcurrentQueue/Functional.h
-    src/ConcurrentQueue/main.cpp
+    src/QtSignal/QtSignal.h
+    src/QtSignal/QtSignalImpl.h
+    src/QtSignal/Functional.h
+    src/QtSignal/main.cpp
     )
 
 add_custom_target(debug
@@ -67,5 +67,5 @@ add_custom_target(release
     COMMENT "Switch CMAKE_BUILD_TYPE to Release"
 )
 
-add_executable(qtsignal ${SOURCE_FILES})
-target_link_libraries(qtsignal ${EXTRA_LIBS})
+add_executable(QtSignal ${SOURCE_FILES})
+target_link_libraries(QtSignal ${EXTRA_LIBS})

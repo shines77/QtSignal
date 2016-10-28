@@ -1,2 +1,2 @@
 # QtSignal
-A signal implementation using C++ 11.
+A signal implementation using C++ 11 like QT signal.
