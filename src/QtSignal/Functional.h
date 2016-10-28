@@ -16,6 +16,9 @@ namespace std {
 #if !defined(_MSC_VER)
 
 #define _NOEXCEPT noexcept
+#ifndef cdecl
+#define cdecl
+#endif
 
 template <std::size_t N>
 struct _Ph {};
@@ -148,8 +151,10 @@ template <typename Ret, typename ...Args>
 static bool function_equal(std::function<Ret(Args...)> const & func1, std::function<Ret(Args...)> const & func2) _NOEXCEPT {
     typedef Ret(FuncType)(Args...);
     size_t sizeArgs = sizeof...(Args);
-    Ret(* const * ptr1)(Args...) = func1.target<Ret(*)(Args...)>();
-    Ret(* const * ptr2)(Args...) = func2.target<Ret(*)(Args...)>();
+    //Ret(* const * ptr1)(Args...) = func1.target<Ret(*)(Args...)>();
+    //Ret(* const * ptr2)(Args...) = func2.target<Ret(*)(Args...)>();
+    FuncType ** ptr1 = func1.target<FuncType *>();
+    FuncType ** ptr2 = func2.target<FuncType *>();
     bool is_equal = ((ptr1 != nullptr) && (ptr2 != nullptr) && (ptr1 == ptr2));
     return is_equal;
 }
