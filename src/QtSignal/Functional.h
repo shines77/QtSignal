@@ -11,8 +11,14 @@
 #include <utility>
 #include <type_traits>
 
-#if 0
 namespace std {
+
+#if !defined(_MSC_VER)
+template <std::size_t N>
+struct _Ph {};
+
+template <class _Ret, class _Fx, class ..._Types>
+class _Binder {};
 
 template <class _Ret, class _Fx, class T, class ..._Types>
 //class _Binder : public std::_Binder<_Ret, _Fx, std::tuple<std::decay<_Types>::type...> >
@@ -21,15 +27,15 @@ class _Binder : public std::_Binder<_Ret, _Fx, _Types...>
     _Binder() {}
     ~_Binder() {}
 };
+#endif
 
 } // namespace std
-#endif
 
 namespace jimi {
 
 // Convert array into a tuple
-template <typename T, std::size_t N, std::size_t ...I>
-decltype(auto) make_args_tuple_impl(std::array<T, N> & arr, std::index_sequence<I...>)
+template <typename Array, std::size_t ...I>
+decltype(auto) make_args_tuple_impl(Array & arr, std::index_sequence<I...>)
 {
     //static constexpr std::size_t M = I + 1;
     const std::_Ph<1> * arg = nullptr;
@@ -55,12 +61,14 @@ struct make_args_list_impl : make_args_list_impl2<(I - 1)..., N, Args...>
 };
 //*/
 
+#if 0
 template <typename T, std::size_t N, std::size_t ...I>
 struct make_args_list
 {
     //typedef typename make_args_list_impl<I..., N, Args...>::type type;
     typedef typename std::_Ph<std::index_sequence<I...>::value>::type type;
 };
+#endif
 
 /*
 template <std::size_t N, typename T>
