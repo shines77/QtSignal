@@ -35,6 +35,8 @@ class _Binder : public std::_Binder<_Ret, _Fx, _Types...>
     ~_Binder() {}
 };
 #endif
+
+struct _Unforced {};
 #endif
 
 } // namespace std
@@ -151,10 +153,10 @@ template <typename Ret, typename ...Args>
 static bool function_equal(std::function<Ret(Args...)> const & func1, std::function<Ret(Args...)> const & func2) _NOEXCEPT {
     typedef Ret(FuncType)(Args...);
     size_t sizeArgs = sizeof...(Args);
-    //Ret(* const * ptr1)(Args...) = func1.target<Ret(*)(Args...)>();
-    //Ret(* const * ptr2)(Args...) = func2.target<Ret(*)(Args...)>();
-    FuncType ** ptr1 = func1.target<FuncType *>();
-    FuncType ** ptr2 = func2.target<FuncType *>();
+    //Ret(* const * ptr1)(Args...) = func1.template target<Ret(*)(Args...)>();
+    //Ret(* const * ptr2)(Args...) = func2.template target<Ret(*)(Args...)>();
+    FuncType ** ptr1 = func1.template target<FuncType *>();
+    FuncType ** ptr2 = func2.template target<FuncType *>();
     bool is_equal = ((ptr1 != nullptr) && (ptr2 != nullptr) && (ptr1 == ptr2));
     return is_equal;
 }
