@@ -52,10 +52,12 @@ inline bool operator == (std::function<R(Args...)> const & func1, std::function<
     return ((ptr1 != nullptr) && (ptr2 != nullptr) && (ptr1 == ptr2));
 }
 
+/*
 template <typename R, typename ...Args>
 inline bool operator == (std::function<R(Args...)> && func1, std::function<R(Args...)> && func2) _NOEXCEPT {
     return true;
 }
+//*/
 
 void test_signal()
 {
@@ -80,7 +82,7 @@ void test_signal()
     printf("\n");
     //std::function<void(FooA *, int)> memfunc_a(FooA::onValueChange, &a, _1);
     printf("(memfunc_a1 == memfunc_a2) ? %d\n", (int)(memfunc_a1 == memfunc_a2));
-    printf("(memfunc_a1 == memfunc_a2) ? %d\n", (int)jimi::template function_equal<FooA>(memfunc_a1, memfunc_a2));
+    printf("(memfunc_a1 == memfunc_a2) ? %d\n", (int)jimi::function_equal<FooA>(memfunc_a1, memfunc_a2));
     signal_int_inst.connect(signal_slots::OnValueChange, memfunc_a1);
     signal_int_inst.connect(signal_slots::OnValueChange, memfunc_b);
     signal_int_inst.emit(signal_slots::OnValueChange, 100);
@@ -90,7 +92,7 @@ void test_signal()
     std::function<void(int, int, int)> memfunc_a2_ = std::bind(&FooA::onValueChange2, &a, _1, _2, _3);
 
     printf("memfunc_a1_.target_type().name() = %s\n\n", memfunc_a1_.target_type().name());
-    printf("(memfunc_a1_ == memfunc_a2_) ? %d\n", (int)jimi::template function_equal<FooA>(memfunc_a1_, memfunc_a2_));
+    printf("(memfunc_a1_ == memfunc_a2_) ? %d\n", (int)jimi::function_equal<FooA>(memfunc_a1_, memfunc_a2_));
 }
 
 void run_unittest()
