@@ -20,6 +20,7 @@ struct _Ph {};
 template <class _Ret, class _Fx, class ..._Types>
 class _Binder {};
 
+#if 0
 template <class _Ret, class _Fx, class T, class ..._Types>
 //class _Binder : public std::_Binder<_Ret, _Fx, std::tuple<std::decay<_Types>::type...> >
 class _Binder : public std::_Binder<_Ret, _Fx, _Types...>
@@ -27,6 +28,7 @@ class _Binder : public std::_Binder<_Ret, _Fx, _Types...>
     _Binder() {}
     ~_Binder() {}
 };
+#endif
 #endif
 
 } // namespace std
@@ -43,7 +45,7 @@ decltype(auto) make_args_tuple_impl(Array & arr, std::index_sequence<I...>)
     return std::make_tuple(arr[I]...);
 }
 
-template <typename T, std::size_t N, typename Indices = std::make_index_sequence<N>>
+template <typename T, std::size_t N, typename Indices = std::make_index_sequence<N> >
 decltype(auto) make_args_tuple(std::array<T, N> & arr)
 {
     return make_args_tuple_impl(arr, Indices());
@@ -102,7 +104,7 @@ private:
 
 };
 
-class unforced;
+struct unforced {};
 
 template <typename Func, typename ...Args>
 inline binder<Func, unforced, Args...> bind(Func && func, Args && ...args) {
