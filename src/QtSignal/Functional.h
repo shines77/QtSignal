@@ -43,6 +43,45 @@ struct _Unforced {};
 
 namespace jimi {
 
+#if 0
+// Convert array into a tuple
+template <typename Array, std::size_t ...I>
+decltype(auto) make_args_tuple_impl(Array & arr, std::index_sequence<I...>)
+{
+    //static constexpr std::size_t M = I + 1;
+    const std::_Ph<1> * arg = nullptr;
+    //arr[I]... = (T)(void *)arg;
+    return std::make_tuple(arr[I]...);
+}
+
+template <typename T, std::size_t N, typename Indices = std::make_index_sequence<N> >
+decltype(auto) make_args_tuple(std::array<T, N> & arr)
+{
+    return make_args_tuple_impl(arr, Indices());
+}
+#endif
+
+/*
+template <std::size_t ...I, std::size_t N, typename T, typename ...Args>
+struct make_args_list_impl2 : make_args_list_impl2<(I - 1)..., N, Args...>
+{
+};
+
+template <std::size_t ...I, std::size_t N, typename ...Args>
+struct make_args_list_impl : make_args_list_impl2<(I - 1)..., N, Args...>
+{
+};
+//*/
+
+#if 0
+template <typename T, std::size_t N, std::size_t ...I>
+struct make_args_list
+{
+    //typedef typename make_args_list_impl<I..., N, Args...>::type type;
+    typedef typename std::_Ph<std::index_sequence<I...>::value>::type type;
+};
+#endif
+
 namespace detail {
 
     ///////////////////////////////////////////////////////////////////////////
@@ -86,7 +125,7 @@ namespace detail {
     struct func_traits<Ret(*)(Args...)> {
         typedef Ret(cdecl * func_type)(Args...);
         typedef std::function<Ret(Args...)> type;
-        typedef std::nullptr_t caller_type;
+        typedef std::nullptr_t callable_type;
     };
 
     /* check member function */
@@ -96,7 +135,7 @@ namespace detail {
         struct func_traits<Ret(Caller::*)(Args...) __VA_ARGS__> { \
             typedef Ret(cdecl * func_type)(Caller *, Args...); \
             typedef std::function<Ret(Args...)> type; \
-            typedef Caller caller_type; \
+            typedef Caller callable_type; \
         };
     #endif
 
@@ -109,77 +148,75 @@ namespace detail {
 
     ///////////////////////////////////////////////////////////////////////////
 
+    struct noargs_t {
+        // Tag for no argument.
+    };
+
+    struct noargs_tuple_t {
+        // Tag for no argument.
+    };
+
+    template <typename Func, typename Ret>
+    struct compressed_pair_no_args {
+        typedef typename std::decay<Func>::type                     callable_type;
+        typedef typename detail::func_traits<callable_type>::callable_type
+                                                                    caller_type;
+        typedef typename detail::noargs_tuple_t                     args_type;
+        typedef typename detail::noargs_t                           first_type;
+        typedef typename detail::noargs_tuple_t                     second_type;
+        typedef std::function<Ret()>                                slot_type;
+    };
+
+    template <typename Func, typename Ret, typename T, typename ...Args>
+    struct compressed_pair_one_more_args {
+        typedef typename std::decay<T>::type                        first_type;
+        typedef std::function<Ret(first_type *, Args...)>           slot_type;
+    };
+
+#if 0
+    template <typename Func, typename Ret, typename ...Args>
+    struct compressed_pair;
+#else
+    template <typename Func, typename Ret, typename ...Args>
+    struct compressed_pair {
+        typedef typename detail::noargs_t                           first_type;
+        typedef std::function<Ret(Args...)>                         slot_type;
+    };
+#endif
+
+    template <typename Func, typename Ret>
+    struct compressed_pair<Func, Ret> : compressed_pair_no_args<Func, Ret> {
+    };
+
+    ///*
+    template <typename Func, typename Ret, typename T, typename ...Args>
+    struct compressed_pair<Func, Ret, T, Args...> :
+        compressed_pair_one_more_args<Func, Ret, T, Args...> {
+        typedef typename std::decay<Func>::type                     callable_type;
+        typedef typename detail::func_traits<callable_type>::callable_type
+                                                                    caller_type;
+        typedef std::tuple<typename std::decay<Args>::type...>      args_type;
+        typedef typename std::decay<T>::type                        first_type;
+        typedef std::tuple<typename std::decay<Args>::type...>      second_type;
+        typedef std::function<Ret(first_type, Args...)>             slot_type;
+    };
+    //*/
+
+    ///////////////////////////////////////////////////////////////////////////
+
 } // namespace detail
-
-#if 0
-// Convert array into a tuple
-template <typename Array, std::size_t ...I>
-decltype(auto) make_args_tuple_impl(Array & arr, std::index_sequence<I...>)
-{
-    //static constexpr std::size_t M = I + 1;
-    const std::_Ph<1> * arg = nullptr;
-    //arr[I]... = (T)(void *)arg;
-    return std::make_tuple(arr[I]...);
-}
-
-template <typename T, std::size_t N, typename Indices = std::make_index_sequence<N> >
-decltype(auto) make_args_tuple(std::array<T, N> & arr)
-{
-    return make_args_tuple_impl(arr, Indices());
-}
-#endif
-
-/*
-template <std::size_t ...I, std::size_t N, typename T, typename ...Args>
-struct make_args_list_impl2 : make_args_list_impl2<(I - 1)..., N, Args...>
-{
-};
-
-template <std::size_t ...I, std::size_t N, typename ...Args>
-struct make_args_list_impl : make_args_list_impl2<(I - 1)..., N, Args...>
-{
-};
-//*/
-
-#if 0
-template <typename T, std::size_t N, std::size_t ...I>
-struct make_args_list
-{
-    //typedef typename make_args_list_impl<I..., N, Args...>::type type;
-    typedef typename std::_Ph<std::index_sequence<I...>::value>::type type;
-};
-#endif
-
-/*
-template <std::size_t N, typename T>
-struct make_args_list_impl2<0, N, T>
-{
-    typedef const std::_Ph<1> & type;
-};
-
-template <std::size_t N, typename T>
-struct make_args_list_impl2<1, N, T>
-{
-    typedef const std::_Ph<2> & type;
-};
-
-template <std::size_t N, typename T>
-struct make_args_list_impl2<2, N, T>
-{
-    typedef const std::_Ph<3> & type;
-};
-//*/
 
 template <typename Func, typename Ret, typename ...Args>
 class binder {
 public:
     typedef std::tuple<typename std::decay<Args>::type...>              args_type;
     typedef typename std::decay<Func>::type                             callable_type;
-    typedef typename detail::func_traits<callable_type>::caller_type    caller_type;
+    typedef typename detail::func_traits<callable_type>::callable_type  caller_type;
     typedef typename detail::result_traits<callable_type>::type         result_type;
 
     /// Type that will be used to store the slots for this signal type.
-    typedef std::function<Ret(Args...)> slot_type;
+    typedef typename detail::compressed_pair<Func, Ret, Args...>::slot_type
+                                                                        slot_type;
     typedef Ret(cdecl caller_type::*slot_func_type)(Args...);
 
 private:
@@ -189,11 +226,12 @@ private:
     slot_type     slot_;
 
 public:
-    binder(Func && func, Args && ...args)
+    template <typename Std_Func>
+    binder(Std_Func && std_func, Func && func, Args && ...args)
         : func_(std::forward<Func>(func)),
           args_(std::forward<Args>(args)...) /*,
           slot_(std::bind(std::forward<Func>(func), std::forward<Args>(args)...))*/ {
-        detail::func_traits<Func>::caller_type * pThis = std::get<0>(args_);
+        detail::func_traits<Func>::callable_type * pThis = std::get<0>(args_);
         //detail::func_traits<Func>::type func_t = (*reinterpret_cast<detail::func_traits<Func>::type *>(&func));
         detail::func_traits<Func>::func_type * pFunc = reinterpret_cast<detail::func_traits<Func>::func_type *>(&func);
         //pFunc = offsetof(detail::func_traits<Func>::caller_type, func);
@@ -210,6 +248,7 @@ public:
         //if (pFunc2 != nullptr) {
         //    (*pFunc2)(std::forward<Args>(args)...);
         //}
+        //slot_ = std_func;
     }
 
     binder(binder const & src) {
@@ -252,6 +291,7 @@ template <typename Func, typename ...Args>
 static inline binder<Func, std::_Unforced, Args...> bind(Func && func, Args && ...args) {
     // Bind a callable object with an implicit return type.
     return (binder<Func, std::_Unforced, Args...>(
+        std::bind(std::forward<Func>(func), std::forward<Args>(args)...),
 		std::forward<Func>(func), std::forward<Args>(args)...));
 }
 
@@ -259,6 +299,7 @@ template <typename Func, typename Ret, typename ...Args>
 static inline binder<Func, Ret, Args...> bind(Func && func, Args && ...args) {
     // Bind a callable object with an explicit return type.
     return (binder<Func, Ret, Args...>(
+        std::bind(std::forward<Func>(func), std::forward<Args>(args)...),
 		std::forward<Func>(func), std::forward<Args>(args)...));
 }
 
