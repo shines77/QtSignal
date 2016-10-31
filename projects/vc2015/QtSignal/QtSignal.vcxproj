@@ -20,14 +20,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\QtSignal\Functional.h" />
-    <ClInclude Include="..\..\..\src\QtSignal\semaphore.hpp" />
     <ClInclude Include="..\..\..\src\QtSignal\Signal.h" />
     <ClInclude Include="..\..\..\src\QtSignal\SignalCommon.h" />
     <ClInclude Include="..\..\..\src\QtSignal\SignalImpl.h" />
     <ClInclude Include="..\..\..\src\QtSignal\SignalStub.h" />
     <ClInclude Include="..\..\..\src\QtSignal\SignalStubImpl.h" />
-    <ClInclude Include="..\..\..\src\QtSignal\simple_semaphore.hpp" />
-    <ClInclude Include="..\..\..\src\QtSignal\windows_semaphore.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\QtSignal\main.cpp" />

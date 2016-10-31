@@ -25,15 +25,6 @@
     <ClInclude Include="..\..\..\src\QtSignal\SignalCommon.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\QtSignal\simple_semaphore.hpp">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\QtSignal\windows_semaphore.hpp">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\QtSignal\semaphore.hpp">
-      <Filter>src</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\QtSignal\main.cpp">
