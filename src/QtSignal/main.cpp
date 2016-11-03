@@ -139,7 +139,7 @@ int main(int argn, char * argv[])
     run_unittest();
 #endif
 
-#if 0
+#if 1
     test_signal();
     test_signal_stub();
 #endif

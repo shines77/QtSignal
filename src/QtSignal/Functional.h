@@ -290,6 +290,7 @@ public:
 template <typename Func, typename ...Args>
 static inline binder<Func, std::_Unforced, Args...> bind(Func && func, Args && ...args) {
     // Bind a callable object with an implicit return type.
+    std::function<void(int)> std_func = std::bind(std::forward<Func>(func), std::forward<Args>(args)...);
     return (binder<Func, std::_Unforced, Args...>(
         std::bind(std::forward<Func>(func), std::forward<Args>(args)...),
 		std::forward<Func>(func), std::forward<Args>(args)...));
