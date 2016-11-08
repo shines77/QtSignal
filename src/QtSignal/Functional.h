@@ -11,14 +11,17 @@
 #include <utility>
 #include <type_traits>
 
+#ifndef JIMI_CDECL
+#define JIMI_CDECL   __cdecl
+#endif
+
+#ifndef JIMI_NOEXCEPT
+#define JIMI_NOEXCEPT noexcept
+#endif
+
 namespace std {
 
 #if !defined(_MSC_VER)
-
-#define _NOEXCEPT noexcept
-#ifndef cdecl
-#define cdecl
-#endif
 
 template <std::size_t N>
 struct _Ph {};
@@ -115,44 +118,49 @@ namespace detail {
 
     // member function type filter traits
     template <typename Func>
-    struct func_traits : func_traits<decltype(&Func::operator())> {};
+    struct func_traits_impl : func_traits_impl<decltype(&Func::operator())> {};
 
     template <typename T>
-    struct func_traits<T *> : func_traits<T> {};
+    struct func_traits_impl<T *> : func_traits_impl<T> {};
 
     /* check function */
     template <typename Ret, typename ...Args>
-    struct func_traits<Ret(*)(Args...)> {
-        typedef Ret(cdecl * func_type)(Args...);
-        typedef std::function<Ret(Args...)> type;
+    struct func_traits_impl<Ret(*)(Args...)> {
+        typedef Ret(JIMI_CDECL * func_type)(Args...);
+        typedef Ret(JIMI_CDECL * flat_func_type)(Args...);
+        typedef std::function<Ret(Args...)> flat_type;
         typedef std::nullptr_t callable_type;
     };
 
     /* check member function */
-    #ifndef FUNCTION_TRAITS__
-    #define FUNCTION_TRAITS__(...) \
+    #ifndef FUNCTION_TRAITS_IMPL__
+    #define FUNCTION_TRAITS_IMPL__(...) \
         template <typename Ret, typename Caller, typename ...Args> \
-        struct func_traits<Ret(Caller::*)(Args...) __VA_ARGS__> { \
-            typedef Ret(cdecl * func_type)(Caller *, Args...); \
-            typedef std::function<Ret(Args...)> type; \
+        struct func_traits_impl<Ret(Caller::*)(Args...) __VA_ARGS__> { \
+            typedef Ret(JIMI_CDECL * func_type)(Caller *, Args...); \
+            typedef Ret(JIMI_CDECL * flat_func_type)(Args...); \
+            typedef std::function<Ret(Args...)> flat_type; \
             typedef Caller callable_type; \
         };
     #endif
 
-    FUNCTION_TRAITS__()
-    FUNCTION_TRAITS__(const)
-    FUNCTION_TRAITS__(volatile)
-    FUNCTION_TRAITS__(const volatile)
+    FUNCTION_TRAITS_IMPL__()
+    FUNCTION_TRAITS_IMPL__(const)
+    FUNCTION_TRAITS_IMPL__(volatile)
+    FUNCTION_TRAITS_IMPL__(const volatile)
 
-    #undef FUNCTION_TRAITS__
+    #undef FUNCTION_TRAITS_IMPL__
+
+    template <typename Func>
+    struct func_traits : func_traits_impl<typename std::decay<Func>::type> {};
 
     ///////////////////////////////////////////////////////////////////////////
 
-    struct noargs_t {
+    struct empty_args_t {
         // Tag for no argument.
     };
 
-    struct noargs_tuple_t {
+    struct empty_tuple_t {
         // Tag for no argument.
     };
 
@@ -161,14 +169,14 @@ namespace detail {
         typedef typename std::decay<Func>::type                     callable_type;
         typedef typename detail::func_traits<callable_type>::callable_type
                                                                     caller_type;
-        typedef typename detail::noargs_tuple_t                     args_type;
-        typedef typename detail::noargs_t                           first_type;
-        typedef typename detail::noargs_tuple_t                     second_type;
+        typedef typename detail::empty_tuple_t                      args_type;
+        typedef typename detail::empty_args_t                       first_type;
+        typedef typename detail::empty_tuple_t                      second_type;
         typedef std::function<Ret()>                                slot_type;
     };
 
     template <typename Func, typename Ret, typename T, typename ...Args>
-    struct compressed_pair_one_more_args {
+    struct compressed_pair_has_args {
         typedef typename std::decay<T>::type                        first_type;
         typedef std::function<Ret(first_type *, Args...)>           slot_type;
     };
@@ -179,7 +187,7 @@ namespace detail {
 #else
     template <typename Func, typename Ret, typename ...Args>
     struct compressed_pair {
-        typedef typename detail::noargs_t                           first_type;
+        typedef typename detail::empty_args_t                       first_type;
         typedef std::function<Ret(Args...)>                         slot_type;
     };
 #endif
@@ -188,19 +196,18 @@ namespace detail {
     struct compressed_pair<Func, Ret> : compressed_pair_no_args<Func, Ret> {
     };
 
-    ///*
     template <typename Func, typename Ret, typename T, typename ...Args>
     struct compressed_pair<Func, Ret, T, Args...> :
-        compressed_pair_one_more_args<Func, Ret, T, Args...> {
+        compressed_pair_has_args<Func, Ret, T, Args...> {
         typedef typename std::decay<Func>::type                     callable_type;
         typedef typename detail::func_traits<callable_type>::callable_type
                                                                     caller_type;
         typedef std::tuple<typename std::decay<Args>::type...>      args_type;
         typedef typename std::decay<T>::type                        first_type;
         typedef std::tuple<typename std::decay<Args>::type...>      second_type;
-        typedef std::function<Ret(first_type, Args...)>             slot_type;
+        typedef std::function<Ret(first_type, Args...)>             full_slot_type;
+        typedef std::function<Ret(Args...)>                         slot_type;
     };
-    //*/
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -216,39 +223,23 @@ public:
 
     /// Type that will be used to store the slots for this signal type.
     typedef typename detail::compressed_pair<Func, Ret, Args...>::slot_type
+                                                                        slot_type2;
+    typedef typename detail::func_traits<Func>::flat_type
                                                                         slot_type;
-    typedef Ret(cdecl caller_type::*slot_func_type)(Args...);
+    typedef Ret(JIMI_CDECL caller_type::*slot_func_type)(Args...);
 
 private:
     callable_type func_;
     args_type     args_;
-
     slot_type     slot_;
 
 public:
     template <typename Std_Func>
     binder(Std_Func && std_func, Func && func, Args && ...args)
         : func_(std::forward<Func>(func)),
-          args_(std::forward<Args>(args)...) /*,
-          slot_(std::bind(std::forward<Func>(func), std::forward<Args>(args)...))*/ {
+          args_(std::forward<Args>(args)...) ,
+          slot_(std::forward<Std_Func>(std_func)) {
         detail::func_traits<Func>::callable_type * pThis = std::get<0>(args_);
-        //detail::func_traits<Func>::type func_t = (*reinterpret_cast<detail::func_traits<Func>::type *>(&func));
-        detail::func_traits<Func>::func_type * pFunc = reinterpret_cast<detail::func_traits<Func>::func_type *>(&func);
-        //pFunc = offsetof(detail::func_traits<Func>::caller_type, func);
-        
-        auto slot = std::bind(func_, std::forward<Args>(args)...);
-        //slot_ = slot;
-        //slot_ = std::bind(std::move(*pFunc), std::forward<Args>(args)...);
-        slot_func_type * slot_func = reinterpret_cast<slot_func_type *>(&func_);
-        detail::func_traits<Func>::func_type * pFunc2 = reinterpret_cast<detail::func_traits<Func>::func_type *>(&slot_func);
-        //slot_ = std::bind(std::forward<Func>(func), std::forward<Args>(args)...);
-        //slot_ = std::bind(*pFunc2, std::forward<Args>(args)...);
-        auto slot_2 = std::bind(*pFunc2, std::forward<Args>(args)...);
-        //slot_ = slot_2;
-        //if (pFunc2 != nullptr) {
-        //    (*pFunc2)(std::forward<Args>(args)...);
-        //}
-        //slot_ = std_func;
     }
 
     binder(binder const & src) {
@@ -276,13 +267,13 @@ public:
 };
 
 template <typename Func, typename Ret, typename ...Args>
-class function: public binder<Func, Ret, Args...>
+class function : public binder<Func, Ret, Args...>
 {
 private:
     //
 public:
     function(Func && func, Args && ...args) {}
-
+    ~function() {}
 };
 
 //typedef std::_Unforced unforced;
@@ -290,7 +281,6 @@ public:
 template <typename Func, typename ...Args>
 static inline binder<Func, std::_Unforced, Args...> bind(Func && func, Args && ...args) {
     // Bind a callable object with an implicit return type.
-    std::function<void(int)> std_func = std::bind(std::forward<Func>(func), std::forward<Args>(args)...);
     return (binder<Func, std::_Unforced, Args...>(
         std::bind(std::forward<Func>(func), std::forward<Args>(args)...),
 		std::forward<Func>(func), std::forward<Args>(args)...));
@@ -312,7 +302,7 @@ static inline binder<Func, Ret, Args...> bind(Func && func, Args && ...args) {
 // See: http://stackoverflow.com/questions/18039723/c-trying-to-get-function-address-from-a-stdfunction
 //
 template <typename Ret, typename ...Args>
-static inline size_t getAddressOf(std::function<Ret(Args...)> func) _NOEXCEPT {
+static inline size_t getAddressOf(std::function<Ret(Args...)> func) JIMI_NOEXCEPT {
     typedef Ret(funcType)(Args...);
     printf("Ret = %s\n", typeid(Ret).name());
     printf("funcType = %s\n", typeid(funcType).name());
@@ -324,7 +314,7 @@ static inline size_t getAddressOf(std::function<Ret(Args...)> func) _NOEXCEPT {
 }
 
 template <typename Ret, typename ...Args>
-static bool function_equal(std::function<Ret(Args...)> const & func1, std::function<Ret(Args...)> const & func2) _NOEXCEPT {
+static bool function_equal(std::function<Ret(Args...)> const & func1, std::function<Ret(Args...)> const & func2) JIMI_NOEXCEPT {
     typedef Ret(FuncType)(Args...);
     size_t sizeArgs = sizeof...(Args);
     //Ret(* const * ptr1)(Args...) = func1.template target<Ret(*)(Args...)>();
@@ -336,14 +326,14 @@ static bool function_equal(std::function<Ret(Args...)> const & func1, std::funct
 }
 
 template <typename T, typename ...Args>
-static bool function_equal(std::function<void(Args...)> const & func1, std::function<void(Args...)> const & func2) _NOEXCEPT {
+static bool function_equal(std::function<void(Args...)> const & func1, std::function<void(Args...)> const & func2) JIMI_NOEXCEPT {
     bool is_equal = false;
     static constexpr size_t sizeArgs = sizeof...(Args);
-    //typedef void(cdecl T::*MemberFnType)(T *, Args...);
+    //typedef void(JIMI_CDECL T::*MemberFnType)(T *, Args...);
     //Ret(* const T::* ptr1)(T *, Args...) = func1.target<MemberFnType *>();
     //Ret(* const T::* ptr2)(T *, Args...) = func2.target<MemberFnType *>();
     {
-        typedef void(cdecl T::*MemberFnType)(T *, Args...);
+        typedef void(JIMI_CDECL T::*MemberFnType)(T *, Args...);
         printf("MemberFnType = %s\n", typeid(MemberFnType).name());
         MemberFnType const * ptr1 = func1.template target<MemberFnType>();
         MemberFnType const * ptr2 = func2.template target<MemberFnType>();
@@ -354,7 +344,7 @@ static bool function_equal(std::function<void(Args...)> const & func1, std::func
     {
         std::array<void *, sizeArgs> arr = { 0 };
         //auto tuple_list = make_args_tuple(arr);
-        typedef void(cdecl T::*MemberFnType)(Args...);
+        typedef void(JIMI_CDECL T::*MemberFnType)(Args...);
         // decltype(template make_args_tuple<sizeArgs>())
         typedef std::_Binder<std::_Unforced, MemberFnType, T *, std::tuple<Args...>> BindType;
         printf("BindType = %s\n", typeid(BindType).name());
@@ -366,11 +356,11 @@ static bool function_equal(std::function<void(Args...)> const & func1, std::func
 }
 
 template <typename T, typename Ret, typename ...Args>
-static bool function_equal(std::function<Ret(Args...)> const & func1, std::function<Ret(Args...)> const & func2) _NOEXCEPT {
+static bool function_equal(std::function<Ret(Args...)> const & func1, std::function<Ret(Args...)> const & func2) JIMI_NOEXCEPT {
     bool is_equal = false;
     static constexpr size_t sizeArgs = sizeof...(Args);
     {
-        typedef Ret(cdecl T::*MemberFnType)(T *, Args...);
+        typedef Ret(JIMI_CDECL T::*MemberFnType)(T *, Args...);
         printf("MemberFnType = %s\n", typeid(MemberFnType).name());
         MemberFnType const * ptr1 = func1.template target<MemberFnType>();
         MemberFnType const * ptr2 = func2.template target<MemberFnType>();
@@ -381,7 +371,7 @@ static bool function_equal(std::function<Ret(Args...)> const & func1, std::funct
     {
         std::array<void *, sizeArgs> arr = { 0 };
         //auto tuple_list = template make_args_tuple(arr);
-        typedef Ret(cdecl T::*MemberFnType)(Args...);
+        typedef Ret(JIMI_CDECL T::*MemberFnType)(Args...);
         typedef std::_Binder<Ret, MemberFnType, T *, Args...> BindType;
         printf("BindType = %s\n", typeid(BindType).name());
         BindType const * ptr1 = func1.template target<BindType>();
