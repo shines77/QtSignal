@@ -261,7 +261,7 @@ public:
         : func_(std::forward<Func>(func)),
           args_(std::forward<Args>(args)...) ,
           slot_(std::forward<Std_Func>(std_func)) {
-        detail::func_traits<Func>::callable_type * pThis = std::get<0>(args_);
+        //detail::func_traits<Func>::callable_type * pThis = std::get<0>(args_);
     }
 
     binder(binder const & src) {
@@ -279,7 +279,7 @@ public:
     binder & operator = (binder const & rhs) {
         this->func_ = rhs.func_;
         this->args_ = rhs.args_;
-        this->slot_ = src.slot_;
+        this->slot_ = rhs.slot_;
         return (*this);
     }
 
