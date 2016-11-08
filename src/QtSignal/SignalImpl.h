@@ -120,9 +120,9 @@ public:
         return connection{ index, key, shared_disconnector_ };
     }
 
-    template <typename Func, typename ...Args>
-    connection connect(Func && func, Args && ...args) {
-        slot_type slot = jimi::bind(std::forward<Func>(func), std::forward<Args>(args)...);
+    template <typename Func, typename ...Params>
+    connection connect(Func && func, Params && ...params) {
+        slot_type slot = jimi::bind(std::forward<Func>(func), std::forward<Params>(params)...);
         return connect(std::move(slot));
     }
 
