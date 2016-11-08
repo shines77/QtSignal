@@ -11,13 +11,35 @@
 #include <utility>
 #include <type_traits>
 
+#if defined(__GNUC__) || defined(__GNUG__) || defined(__clang__) || defined(__linux__)
+
+#ifndef JIMI_STDCALL
+#define JIMI_STDCALL    __attribute__((__stdcall__))
+#endif
+
 #ifndef JIMI_CDECL
-#define JIMI_CDECL   __cdecl
+#define JIMI_CDECL      __attribute__((__cdecl__))
 #endif
 
 #ifndef JIMI_NOEXCEPT
-#define JIMI_NOEXCEPT noexcept
+#define JIMI_NOEXCEPT   noexcept
 #endif
+
+#elif (defined(_MSC_VER) && (_MSC_VER != 0)) || defined(__ICL) || defined(__INTER_COMPILER)
+
+#ifndef JIMI_STDCALL
+#define JIMI_STDCALL    __stdcall
+#endif
+
+#ifndef JIMI_CDECL
+#define JIMI_CDECL      __cdecl
+#endif
+
+#ifndef JIMI_NOEXCEPT
+#define JIMI_NOEXCEPT   _NOEXCEPT
+#endif
+
+#endif // __GNUC__
 
 namespace std {
 
@@ -40,7 +62,7 @@ class _Binder : public std::_Binder<_Ret, _Fx, _Types...>
 #endif
 
 struct _Unforced {};
-#endif
+#endif // !_MSC_VER
 
 } // namespace std
 
