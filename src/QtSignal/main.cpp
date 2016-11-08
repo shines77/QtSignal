@@ -23,14 +23,14 @@ enum signal_slots {
 };
 
 template <typename R, typename ...Args>
-inline bool operator == (std::function<R(Args...)> const & func1, std::function<R(Args...)> const & func2) _NOEXCEPT {
+inline bool operator == (std::function<R(Args...)> const & func1, std::function<R(Args...)> const & func2) JIMI_NOEXCEPT {
     R (* const * ptr1)(Args...) = func1.template target<R(*)(Args...)>();
     R (* const * ptr2)(Args...) = func2.template target<R(*)(Args...)>();
     return ((ptr1 != nullptr) && (ptr2 != nullptr) && (ptr1 == ptr2));
 }
 
 template <typename R, typename ...Args>
-inline bool operator == (std::function<R(Args...)> && func1, std::function<R(Args...)> && func2) _NOEXCEPT {
+inline bool operator == (std::function<R(Args...)> && func1, std::function<R(Args...)> && func2) JIMI_NOEXCEPT {
     return true;
 }
 
