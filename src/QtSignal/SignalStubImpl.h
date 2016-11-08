@@ -123,7 +123,6 @@ public:
 
     void disconnect(std::size_t key) {
         mutex_lock_type lock(mutex_);
-
 #if 1
         // Because when std::multimap earse a item, the iterator will be invalid.
         // So we record the delete iterators on the first run.

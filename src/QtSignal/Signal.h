@@ -19,13 +19,13 @@ public:
 	template <typename Slot>
 	connection connect(Slot && slot)
 	{
-		return signal_.connect(std::forward<T>(slot));
+		return signal_.connect(std::forward<Slot>(slot));
 	}
 
     template <typename Slot>
 	void disconnect(Slot && slot)
 	{
-		signal_.disconnect(std::forward<T>(slot));
+		signal_.disconnect(std::forward<Slot>(slot));
 	}
 
     template <typename Func>
@@ -36,7 +36,7 @@ public:
 
 	void emit(Args && ...args)
 	{
-		signal_(key, std::forward<Args>(args)...);
+		signal_(std::forward<Args>(args)...);
 	}
 
 private:
@@ -71,7 +71,7 @@ public:
 
 	void emit(Args && ...args)
 	{
-		signal_(key, std::forward<Args>(args)...);
+		signal_(std::forward<Args>(args)...);
 	}
 
 private:

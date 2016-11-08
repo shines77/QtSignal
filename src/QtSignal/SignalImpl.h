@@ -100,11 +100,9 @@ public:
         return (slot_count() == 0);
     }
 
-    void operator () (std::size_t key, Args const & ...args) const {
+    void operator () (Args const & ...args) const {
         for (auto const & it : copy_slots()) {
-            if (it.second && it.first == key) {
-                it.second(args...);
-            }
+            it.second(args...);
         }
     }
 
@@ -130,7 +128,6 @@ public:
 
     void disconnect(std::size_t key) {
         mutex_lock_type lock(mutex_);
-
 #if 1
         // Because when std::multimap earse a item, the iterator will be invalid.
         // So we record the delete iterators on the first run.
