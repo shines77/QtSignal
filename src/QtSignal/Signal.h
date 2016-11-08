@@ -60,13 +60,13 @@ public:
 	template <typename Slot>
 	connection connect(Slot && slot)
 	{
-		return signal_.connect(std::forward<T>(slot));
+		return signal_.connect(std::forward<Slot>(slot));
 	}
 
     template <typename Slot>
 	void disconnect(Slot && slot)
 	{
-		signal_.disconnect(std::forward<T>(slot));
+		signal_.disconnect(std::forward<Slot>(slot));
 	}
 
 	void emit(Args && ...args)
