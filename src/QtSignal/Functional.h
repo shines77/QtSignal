@@ -148,10 +148,11 @@ namespace detail {
     /* check function */
     template <typename Ret, typename ...Args>
     struct func_traits_impl<Ret(*)(Args...)> {
-        typedef Ret(JIMI_CDECL * func_type)(Args...);
-        typedef Ret(JIMI_CDECL * flat_func_type)(Args...);
-        typedef std::function<Ret(Args...)> flat_type;
         typedef std::nullptr_t callable_type;
+        typedef Ret(JIMI_CDECL *func_type)(Args...);
+        typedef Ret(JIMI_CDECL *completed_func_type)(Args...);
+        typedef Ret(JIMI_CDECL *callable_func_type)(Args...);
+        typedef std::function<Ret(Args...)> std_func_type;
     };
 
     /* check member function */
@@ -159,10 +160,11 @@ namespace detail {
     #define FUNCTION_TRAITS_IMPL__(...) \
         template <typename Ret, typename Caller, typename ...Args> \
         struct func_traits_impl<Ret(Caller::*)(Args...) __VA_ARGS__> { \
-            typedef Ret(JIMI_CDECL * func_type)(Caller *, Args...); \
-            typedef Ret(JIMI_CDECL * flat_func_type)(Args...); \
-            typedef std::function<Ret(Args...)> flat_type; \
             typedef Caller callable_type; \
+            typedef Ret(JIMI_CDECL *func_type)(Args...); \
+            typedef Ret(JIMI_CDECL *completed_func_type)(Caller *, Args...); \
+            typedef Ret(JIMI_CDECL callable_type::*callable_func_type)(Args...); \
+            typedef std::function<Ret(Args...)> std_func_type; \
         };
     #endif
 
@@ -246,21 +248,23 @@ public:
     /// Type that will be used to store the slots for this signal type.
     typedef typename detail::compressed_pair<Func, Ret, Args...>::slot_type
                                                                         slot_type2;
-    typedef typename detail::func_traits<Func>::flat_type
+    typedef typename detail::func_traits<Func>::std_func_type
                                                                         slot_type;
-    typedef Ret(JIMI_CDECL caller_type::*slot_func_type)(Args...);
+    //typedef Ret(JIMI_CDECL caller_type::*slot_func_type)(Args...);
+    typedef typename detail::func_traits<callable_type>::callable_func_type
+                                                                        slot_func_type;
 
 private:
+    slot_type     slot_;
     callable_type func_;
     args_type     args_;
-    slot_type     slot_;
 
 public:
     template <typename Std_Func>
     binder(Std_Func && std_func, Func && func, Args && ...args)
-        : func_(std::forward<Func>(func)),
-          args_(std::forward<Args>(args)...) ,
-          slot_(std::forward<Std_Func>(std_func)) {
+        : slot_(std::forward<Std_Func>(std_func)),
+          func_(std::forward<Func>(func)),
+          args_(std::forward<Args>(args)...) {
         //detail::func_traits<Func>::callable_type * pThis = std::get<0>(args_);
     }
 

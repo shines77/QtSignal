@@ -34,12 +34,12 @@ inline bool operator == (std::function<R(Args...)> && func1, std::function<R(Arg
     return true;
 }
 
-void _onValueChange(int index) {
-    std::cout << "_onValueChange(int index): index = " << index << std::endl;
+void _onValueChange1(int index) {
+    std::cout << "_onValueChange1(int index): index = " << index << std::endl;
 }
 
 void _onValueChange2(int x, int y) {
-    std::cout << "_onValueChange(int x, int y): x = " << x << ", y = " << y << std::endl;
+    std::cout << "_onValueChange2(int x, int y): x = " << x << ", y = " << y << std::endl;
 }
 
 void _onValueChange3(int index, int x, int y) {
@@ -49,8 +49,8 @@ void _onValueChange3(int index, int x, int y) {
 
 class A {
 public:
-    void onValueChange(int index) {
-        std::cout << "A::onValueChange(int index): index = " << index << std::endl;
+    void onValueChange1(int index) {
+        std::cout << "A::onValueChange1(int index): index = " << index << std::endl;
     }
 
     void onValueChange2(int x, int y) {
@@ -65,8 +65,8 @@ public:
 
 class B {
 public:
-    void onValueChange(int index) {
-        std::cout << "B::onValueChange(int index): index = " << index << std::endl;
+    void onValueChange1(int index) {
+        std::cout << "B::onValueChange1(int index): index = " << index << std::endl;
     }
 
     void onValueChange2(int x, int y) {
@@ -84,9 +84,13 @@ void test_signal()
     using namespace std::placeholders;
 
     A a; B b;
-    auto binder1  = jimi::bind(&A::onValueChange, &a, _1);
-    auto binder1_ = jimi::bind(&A::onValueChange, &a, _1);
-    auto binder2  = jimi::bind(&B::onValueChange, &b, _1);
+    auto binder1  = jimi::bind(&A::onValueChange1, &a, _1);
+    auto binder1_ = jimi::bind(&A::onValueChange1, &a, _1);
+    auto binder2  = jimi::bind(&B::onValueChange2, &b, _1, _2);
+
+    auto _binder1  = jimi::bind(_onValueChange1, _1);
+    auto _binder1_ = jimi::bind(_onValueChange2, _1, _2);
+    auto _binder2  = jimi::bind(_onValueChange3, _1, _2, _3);
 }
 
 void test_signal_stub()
@@ -103,12 +107,12 @@ void test_signal_stub()
     signal_int & signal_int_inst = signal_int::get();
 
     A a; B b;
-    //std::function<void(int)> memfunc_a1 = std::bind(&A::onValueChange, &a, _1);
-    //std::function<void(int)> memfunc_a2 = std::bind(&A::onValueChange, &a, _1);
-    std::function<void(int)> memfunc_b = std::bind(&B::onValueChange, &b, _1);
-    std::function<void(int)> memfunc_a1 = std::bind(&_onValueChange, _1);
-    std::function<void(int)> memfunc_a2 = std::bind(&_onValueChange, _1);
-    //std::function<void(int)> memfunc_b = std::bind(&_onValueChange, _1);
+    //std::function<void(int)> memfunc_a1 = std::bind(&A::onValueChange1, &a, _1);
+    //std::function<void(int)> memfunc_a2 = std::bind(&A::onValueChange2, &a, _1);
+    std::function<void(int)> memfunc_b = std::bind(&B::onValueChange1, &b, _1);
+    std::function<void(int)> memfunc_a1 = std::bind(&_onValueChange1, _1);
+    std::function<void(int)> memfunc_a2 = std::bind(&_onValueChange1, _1);
+    //std::function<void(int)> memfunc_b = std::bind(&_onValueChange1, _1);
     printf("memfunc_a1.target_type().name() = %s\n\n", memfunc_a1.target_type().name());
     printf("jimi::getAddressOf(memfunc_a1) = 0x%p\n", (void *)jimi::getAddressOf(memfunc_a1));
     printf("jimi::getAddressOf(memfunc_a2) = 0x%p\n", (void *)jimi::getAddressOf(memfunc_a2));
