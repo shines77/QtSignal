@@ -49,8 +49,10 @@ include_directories(src)
 include_directories(src/QtSignal)
 
 set(SOURCE_FILES 
-    src/QtSignal/QtSignal.h
-    src/QtSignal/QtSignalImpl.h
+    src/QtSignal/Signal.h
+    src/QtSignal/SignalImpl.h
+    src/QtSignal/SignalStub.h
+    src/QtSignal/SignalStubImpl.h
     src/QtSignal/Functional.h
     src/QtSignal/main.cpp
     )
