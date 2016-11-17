@@ -88,9 +88,16 @@ void test_signal()
     auto binder1_ = jimi::bind(&A::onValueChange1, &a, _1);
     auto binder2  = jimi::bind(&B::onValueChange2, &b, _1, _2);
 
-    auto _binder1  = jimi::bind(_onValueChange1, _1);
-    auto _binder1_ = jimi::bind(_onValueChange2, _1, _2);
-    auto _binder2  = jimi::bind(_onValueChange3, _1, _2, _3);
+    jimi::function<void(int)>           _binder1  = jimi::bind(_onValueChange1, _1);
+    jimi::function<void(int, int)>      _binder2  = jimi::bind(_onValueChange2, _1, _2);
+    jimi::function<void(int, int, int)> _binder3  = jimi::bind(_onValueChange3, _1, _2, _3);
+
+    _binder1(4);
+    _binder2(4, 5);
+    _binder3(3, 4, 5);
+
+    jimi::function<void(int)> A_OnValueChange1 = jimi::bind(&A::onValueChange1, &a, _1);
+    A_OnValueChange1(100);
 }
 
 void test_signal_stub()

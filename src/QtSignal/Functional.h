@@ -109,32 +109,50 @@ struct make_args_list
 
 namespace detail {
 
+    template <typename FromFuncType, typename ToFuncType>
+    static inline
+    ToFuncType func_type_cast(const FromFuncType & from_func_ptr) {
+        const FromFuncType * pFromFunc = reinterpret_cast<const FromFuncType *>(&from_func_ptr);
+        const ToFuncType * pToFunc = reinterpret_cast<const ToFuncType *>(pFromFunc);
+        ToFuncType to_func_ptr = (*const_cast<ToFuncType *>(pToFunc));
+        return to_func_ptr;
+    }
+
     ///////////////////////////////////////////////////////////////////////////
 
     // result type traits
     template <typename Func>
-    struct result_traits : result_traits<decltype(&Func::operator())> {};
+    struct result_traits_impl : result_traits_impl<decltype(&Func::operator())> {};
 
     template <typename T>
-    struct result_traits<T *> : result_traits<T> {};
+    struct result_traits_impl<T *> : result_traits_impl<T> {};
 
     /* check function */
     template <typename Ret, typename ...Args>
-    struct result_traits<Ret(*)(Args...)> { typedef Ret type; };
+    struct result_traits_impl<Ret(*)(Args...)> {
+        typedef Ret type;
+        typedef typename std::conditional<std::is_void<Ret>::value, std::_Unforced, Ret>::type forced_type;
+    };
 
     /* check member function */
-    #ifndef RESULT_TRAITS__
-    #define RESULT_TRAITS__(...) \
+    #ifndef RESULT_TRAITS_IMPL__
+    #define RESULT_TRAITS_IMPL__(...) \
         template <typename Ret, typename Caller, typename ...Args> \
-        struct result_traits<Ret(Caller::*)(Args...) __VA_ARGS__> { typedef Ret type; };
+        struct result_traits_impl<Ret(Caller::*)(Args...) __VA_ARGS__> { \
+            typedef Ret type; \
+            typedef typename std::conditional<std::is_void<Ret>::value, std::_Unforced, Ret>::type forced_type; \
+        };
     #endif
 
-    RESULT_TRAITS__()
-    RESULT_TRAITS__(const)
-    RESULT_TRAITS__(volatile)
-    RESULT_TRAITS__(const volatile)
+    RESULT_TRAITS_IMPL__()
+    RESULT_TRAITS_IMPL__(const)
+    RESULT_TRAITS_IMPL__(volatile)
+    RESULT_TRAITS_IMPL__(const volatile)
 
-    #undef RESULT_TRAITS__
+    #undef RESULT_TRAITS_IMPL__
+
+    template <typename Func>
+    struct result_traits : result_traits_impl<typename std::decay<Func>::type> {};
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -148,11 +166,14 @@ namespace detail {
     /* check function */
     template <typename Ret, typename ...Args>
     struct func_traits_impl<Ret(*)(Args...)> {
-        typedef std::nullptr_t callable_type;
+        typedef void callable_type;
         typedef Ret(JIMI_CDECL *func_type)(Args...);
         typedef Ret(JIMI_CDECL *completed_func_type)(Args...);
+        typedef Ret(JIMI_CDECL *flat_func_type)(void *, Args...);
         typedef Ret(JIMI_CDECL *callable_func_type)(Args...);
         typedef std::function<Ret(Args...)> std_func_type;
+        typedef std::tuple<typename std::decay<Args>::type...> args_type;
+        enum { is_member_func = false };
     };
 
     /* check member function */
@@ -163,8 +184,11 @@ namespace detail {
             typedef Caller callable_type; \
             typedef Ret(JIMI_CDECL *func_type)(Args...); \
             typedef Ret(JIMI_CDECL *completed_func_type)(Caller *, Args...); \
+            typedef Ret(JIMI_CDECL *flat_func_type)(void *, Args...); \
             typedef Ret(JIMI_CDECL callable_type::*callable_func_type)(Args...); \
             typedef std::function<Ret(Args...)> std_func_type; \
+            typedef std::tuple<typename std::decay<Args>::type...> args_type; \
+            enum { is_member_func = true }; \
         };
     #endif
 
@@ -224,7 +248,7 @@ namespace detail {
     struct compressed_pair<Func, Ret, T, Args...> :
         compressed_pair_has_args<Func, Ret, T, Args...> {
         typedef typename std::decay<Func>::type                     callable_type;
-        typedef typename detail::func_traits<callable_type>::callable_type
+        typedef typename detail::func_traits<Func>::callable_type
                                                                     caller_type;
         typedef std::tuple<typename std::decay<Args>::type...>      args_type;
         typedef typename std::decay<T>::type                        first_type;
@@ -235,29 +259,49 @@ namespace detail {
 
     ///////////////////////////////////////////////////////////////////////////
 
+    template <typename T, bool is_member_func, typename ...Args>
+    struct tuple_traits {
+        static T * get_first_value(Args && ...args) {
+            return nullptr;
+        } 
+    };
+
+    template <typename T, typename ...Args>
+    struct tuple_traits<T, true, Args...> {
+        typedef std::tuple<typename std::decay<Args>::type...> args_type;
+        static T * get_first_value(Args && ...args) {
+            args_type _tuples(std::forward<Args>(args)...);
+            return static_cast<T *>(std::get<0>(_tuples));
+        } 
+    };
+
+    ///////////////////////////////////////////////////////////////////////////
+
 } // namespace detail
 
 template <typename Func, typename Ret, typename ...Args>
 class binder {
 public:
-    typedef std::tuple<typename std::decay<Args>::type...>              args_type;
-    typedef typename std::decay<Func>::type                             callable_type;
-    typedef typename detail::func_traits<callable_type>::callable_type  caller_type;
-    typedef typename detail::result_traits<callable_type>::type         result_type;
+    typedef std::tuple<typename std::decay<Args>::type...>      args_type;
+    typedef typename std::decay<Func>::type                     callable_type;
+    typedef typename detail::func_traits<Func>::callable_type   caller_type;
+    typedef typename detail::result_traits<Func>::type          result_type;
 
     /// Type that will be used to store the slots for this signal type.
     typedef typename detail::compressed_pair<Func, Ret, Args...>::slot_type
-                                                                        slot_type2;
+                                                                slot_type2;
     typedef typename detail::func_traits<Func>::std_func_type
-                                                                        slot_type;
-    //typedef Ret(JIMI_CDECL caller_type::*slot_func_type)(Args...);
-    typedef typename detail::func_traits<callable_type>::callable_func_type
-                                                                        slot_func_type;
-
-private:
-    slot_type     slot_;
-    callable_type func_;
-    args_type     args_;
+                                                                slot_type;
+    typedef typename detail::func_traits<Func>::callable_func_type
+                                                                slot_func_type;
+    typedef typename detail::func_traits<Func>::completed_func_type
+                                                                cdecl_func_type;
+public:
+    slot_type       slot_;
+    callable_type   func_;
+    cdecl_func_type cdecl_func_;
+    caller_type *   caller_;
+    args_type       args_;
 
 public:
     template <typename Std_Func>
@@ -265,41 +309,114 @@ public:
         : slot_(std::forward<Std_Func>(std_func)),
           func_(std::forward<Func>(func)),
           args_(std::forward<Args>(args)...) {
-        //detail::func_traits<Func>::callable_type * pThis = std::get<0>(args_);
+#if 0
+        if (binder<Func, Ret, Args...>::is_member_func()) {
+            caller_ = detail::tuple_traits<caller_type, std::is_member_function_pointer<Func>::value, Args...>
+                        ::get_first_value(std::forward<Args>(args)...);
+            is_member_func_ = true;
+        }
+        else {
+            caller_ = nullptr;
+            is_member_func_ = false;
+        }
+#endif
+        cdecl_func_ = detail::func_type_cast<callable_type, cdecl_func_type>(func_);
+        caller_ = detail::tuple_traits<caller_type, std::is_member_function_pointer<Func>::value, Args...>
+                        ::get_first_value(std::forward<Args>(args)...);
     }
 
     binder(binder const & src) {
+        this->slot_ = src.slot_;
         this->func_ = src.func_;
         this->args_ = src.args_;
-        this->slot_ = src.slot_;
     }
 
     binder(binder && src) {
+        this->slot_ = std::move(src.slot_);
         this->func_ = std::move(src.func_);
         this->args_ = std::move(src.args_);
-        this->slot_ = std::move(src.slot_);
     }
 
     binder & operator = (binder const & rhs) {
+        this->slot_ = rhs.slot_;
         this->func_ = rhs.func_;
         this->args_ = rhs.args_;
-        this->slot_ = rhs.slot_;
         return (*this);
     }
-
-    void init() {
-    }
-
 };
 
-template <typename Func, typename Ret, typename ...Args>
-class function : public binder<Func, Ret, Args...>
+template <typename Func>
+class function
 {
-private:
-    //
 public:
-    function(Func && func, Args && ...args) {}
+    typedef Func                                                func_type;
+    typedef typename std::decay<Func>::type                     callable_type;
+    typedef typename detail::func_traits<Func>::callable_type   caller_type;
+    typedef typename detail::result_traits<Func>::type          result_type;
+    typedef typename detail::result_traits<Func>::forced_type   forced_result_type;
+    typedef typename detail::func_traits<Func>::std_func_type
+                                                                slot_type;
+    typedef typename detail::func_traits<Func>::callable_func_type
+                                                                slot_func_type;
+    typedef typename detail::func_traits<Func>::flat_func_type
+                                                                flat_func_type;
+    typedef typename detail::func_traits<Func>::args_type       args_type;
+
+private:
+    slot_type       slot_;
+    slot_func_type  func_;
+    flat_func_type  flat_func_;
+    void *          caller_;
+    args_type       args_;
+
+public:
+    function(Func && func)
+        : slot_(), func_(nullptr), args_(nullptr), caller_(nullptr) {}
+
+#if 0
+    template <typename ...Args>
+    function(const binder<slot_func_type, forced_result_type, Args...> & rhs) {
+        slot_ = rhs.slot_;
+        func_ = rhs.func_;
+    }
+#endif
+
+    template <typename Binder>
+    function(const Binder & src) {
+        slot_ = src.slot_;
+        func_ = detail::func_type_cast<Binder::slot_func_type, slot_func_type>(src.func_);
+        flat_func_ = detail::func_type_cast<Binder::slot_func_type, flat_func_type>(src.func_);
+        caller_ = reinterpret_cast<void *>(src.caller_);
+        //args_ = rhs.args_;
+    }
+
     ~function() {}
+
+    template <typename ...Args>
+    result_type operator ()(Args ...args) {
+        if (this->slot_)
+            return this->slot_(std::forward<Args>(args)...);
+        else
+            return;
+    }
+
+#if 0
+    template <typename ...Args>
+    function & operator = (const binder<slot_func_type, forced_result_type, Args...> & rhs) {
+        slot_ = rhs.slot_;
+        func_ = rhs.func_;
+        return (*this);
+    }
+#endif
+
+    template <typename Binder>
+    function & operator = (const Binder & rhs) {
+        slot_ = rhs.slot_;
+        func_ = detail::func_type_cast<Binder::slot_func_type, slot_func_type>(rhs.func_);
+        flat_func_ = detail::func_type_cast<Binder::slot_func_type, flat_func_type>(rhs.func_);
+        caller_ = reinterpret_cast<void *>(rhs.caller_);
+        return (*this);
+    }
 };
 
 //typedef std::_Unforced unforced;
