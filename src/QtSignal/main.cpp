@@ -215,7 +215,7 @@ template <typename T>
 BOOL CreateTimerQueueTimerWrapper(
     _Outptr_ PHANDLE phNewTimer,
     _In_opt_ HANDLE TimerQueue,
-    _In_ std::function<void(BOOLEAN)> & Callback,
+    _In_ std::function<void(BOOLEAN)> const & Callback,
     _In_ T const & Host,
     _In_ PARAM_DATA & ParamData,
     _In_opt_ PVOID Parameter,
@@ -224,38 +224,45 @@ BOOL CreateTimerQueueTimerWrapper(
     _In_ ULONG Flags
     )
 {
-    //ParamData.Callback = const_cast<std::function<void(BOOLEAN)>>(Callback);
     ParamData.Callback = Callback;
     ParamData.Host = (PVOID)const_cast<T *>(&Host);
     return CreateTimerQueueTimer(phNewTimer, TimerQueue, &CallbackWrapper<T>::WaitOrTimerCallback,
-                                 &ParamData, DueTime, Period, Flags);
+                                 (PVOID)&ParamData, DueTime, Period, Flags);
 }
 
-int test_timequeue()
+void test_timequeue()
 {
-	FooA a;    
+	FooA foo;
+    PARAM_DATA ParamData;
 	HANDLE hTimer1 = NULL;
     HANDLE hTimer2 = NULL;
 
-    CreateTimerQueueTimer(&hTimer1, NULL, FooA::WaitOrTimerCallback, &a, 0, 1000, 0);
+    CreateTimerQueueTimer(&hTimer1, NULL, &FooA::WaitOrTimerCallback, (PVOID)&foo, 0, 1000, 0);
 
-    std::function<void(BOOLEAN)> callback = std::bind(&FooA::OnWaitOrTimerCallbackWrapper, &a, std::placeholders::_1);
-    PARAM_DATA ParamData = { callback, NULL };
-    CreateTimerQueueTimerWrapper(&hTimer2, NULL, callback, a, ParamData, NULL, 0, 1000, 0);
+    std::function<void(BOOLEAN)> callback = std::bind(&FooA::OnWaitOrTimerCallbackWrapper, &foo, std::placeholders::_1);
+    CreateTimerQueueTimerWrapper(&hTimer2, NULL, callback, foo, ParamData, NULL, 0, 2000, 0);
 
     MSG msg;
     BOOL isQuit = FALSE;
     while (GetMessage(&msg, NULL, 0, 0)) {
         if (TranslateMessage(&msg)) {
-            if (msg.message == WM_QUIT)
-                isQuit = TRUE;
-            DispatchMessage(&msg);
-            if (isQuit)
+            if (msg.message == WM_QUIT ||
+                msg.message == WM_CLOSE) {
+                printf("\nWill be quit!\n\n");
+                DispatchMessage(&msg);
                 break;
+            }
+            
+            DispatchMessage(&msg);
         }
     }
 
-    return 0;
+    if (hTimer1) {
+        CloseHandle(hTimer1);
+    }
+    if (hTimer2) {
+        CloseHandle(hTimer2);
+    }
 }
 
 void run_unittest()
