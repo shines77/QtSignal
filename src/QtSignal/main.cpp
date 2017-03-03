@@ -1,4 +1,26 @@
 
+#ifndef _WIN32_WINNT            // 指定要求的最低平台是 Windows XP。
+#define _WIN32_WINNT 0x0501     // 将此值更改为相应的值，以适用于 Windows 的其他版本。
+#endif
+
+#ifndef _WIN32_WINNT            // 指定要求的最低平台是 Windows XP。
+#define _WIN32_WINNT 0x0501     // 将此值更改为相应的值，以适用于 Windows 的其他版本。
+#endif
+
+#ifndef _WIN32_WINDOWS          // 指定要求的最低平台是 Windows XP。
+#define _WIN32_WINDOWS 0x0501   // 将此值更改为适当的值，以适用于 Windows 的其他版本。
+#endif
+
+#ifndef _WIN32_IE               // 指定要求的最低平台是 Internet Explorer 6.0。
+#define _WIN32_IE 0x0600        // 将此值更改为相应的值，以适用于 IE 的其他版本。
+#endif
+
+// Windows 头文件
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN // 从 Windows 头中排除极少使用的资料
+#endif
+#include <windows.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -139,6 +161,103 @@ void test_signal_stub()
     printf("(memfunc_a1_ == memfunc_a2_) ? %d\n", (int)jimi::function_equal<A>(memfunc_a1_, memfunc_a2_));
 }
 
+class FooA
+{
+public:
+	FooA() {};
+	~FooA() {};
+
+	static VOID CALLBACK WaitOrTimerCallback(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
+	{
+        if (lpParameter != NULL) {
+		    ((FooA *)lpParameter)->OnWaitOrTimerCallback(TimerOrWaitFired);
+        }
+	}
+protected:
+	void OnWaitOrTimerCallback(BOOLEAN TimerOrWaitFired)
+	{
+        printf("call OnWaitOrTimerCallback()\n");
+	}
+
+public:
+    void OnWaitOrTimerCallbackWrapper(BOOLEAN TimerOrWaitFired)
+	{
+        printf("call OnWaitOrTimerCallbackWrapper()\n");
+	}
+};
+
+typedef struct _PARAM_DATA {
+    std::function<void(BOOLEAN)> Callback;
+    PVOID Host;
+} PARAM_DATA, * PPARAM_DATA;
+
+template <typename T>
+class CallbackWrapper {
+public:
+	static VOID CALLBACK WaitOrTimerCallback(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
+	{
+        PARAM_DATA * ParamData = (PARAM_DATA *)lpParameter;
+        if (ParamData != NULL) {
+            if (ParamData->Callback) {
+                (ParamData->Callback)(TimerOrWaitFired);
+            }
+            else if (ParamData->Host != NULL) {
+		        ((T *)ParamData->Host)->OnWaitOrTimerCallbackWrapper(TimerOrWaitFired);
+            }
+            else {
+                // Unknown error
+            }
+        }
+	}
+};
+
+template <typename T>
+BOOL CreateTimerQueueTimerWrapper(
+    _Outptr_ PHANDLE phNewTimer,
+    _In_opt_ HANDLE TimerQueue,
+    _In_ std::function<void(BOOLEAN)> & Callback,
+    _In_ T const & Host,
+    _In_ PARAM_DATA & ParamData,
+    _In_opt_ PVOID Parameter,
+    _In_ DWORD DueTime,
+    _In_ DWORD Period,
+    _In_ ULONG Flags
+    )
+{
+    //ParamData.Callback = const_cast<std::function<void(BOOLEAN)>>(Callback);
+    ParamData.Callback = Callback;
+    ParamData.Host = (PVOID)const_cast<T *>(&Host);
+    return CreateTimerQueueTimer(phNewTimer, TimerQueue, &CallbackWrapper<T>::WaitOrTimerCallback,
+                                 &ParamData, DueTime, Period, Flags);
+}
+
+int test_timequeue()
+{
+	FooA a;    
+	HANDLE hTimer1 = NULL;
+    HANDLE hTimer2 = NULL;
+
+    CreateTimerQueueTimer(&hTimer1, NULL, FooA::WaitOrTimerCallback, &a, 0, 1000, 0);
+
+    std::function<void(BOOLEAN)> callback = std::bind(&FooA::OnWaitOrTimerCallbackWrapper, &a, std::placeholders::_1);
+    PARAM_DATA ParamData = { callback, NULL };
+    CreateTimerQueueTimerWrapper(&hTimer2, NULL, callback, a, ParamData, NULL, 0, 1000, 0);
+
+    MSG msg;
+    BOOL isQuit = FALSE;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        if (TranslateMessage(&msg)) {
+            if (msg.message == WM_QUIT)
+                isQuit = TRUE;
+            DispatchMessage(&msg);
+            if (isQuit)
+                break;
+        }
+    }
+
+    return 0;
+}
+
 void run_unittest()
 {
     // TODO:
@@ -149,6 +268,8 @@ int main(int argn, char * argv[])
 #if !defined(NDEBUG)
     run_unittest();
 #endif
+
+    test_timequeue();
 
 #if 1
     test_signal();

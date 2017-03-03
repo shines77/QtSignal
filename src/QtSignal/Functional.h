@@ -29,10 +29,14 @@
 
 #ifndef JIMI_STDCALL
 #define JIMI_STDCALL    __stdcall
+#undef  JIMI_STDCALL
+#define JIMI_STDCALL
 #endif
 
 #ifndef JIMI_CDECL
 #define JIMI_CDECL      __cdecl
+#undef  JIMI_CDECL
+#define JIMI_CDECL
 #endif
 
 #ifndef JIMI_NOEXCEPT
