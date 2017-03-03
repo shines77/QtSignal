@@ -230,6 +230,8 @@ BOOL CreateTimerQueueTimerWrapper(
                                  (PVOID)&ParamData, DueTime, Period, Flags);
 }
 
+volatile bool g_bExit = false;
+
 void test_timequeue()
 {
 	FooA foo;
@@ -240,14 +242,16 @@ void test_timequeue()
     CreateTimerQueueTimer(&hTimer1, NULL, &FooA::WaitOrTimerCallback, (PVOID)&foo, 0, 1000, 0);
 
     std::function<void(BOOLEAN)> callback = std::bind(&FooA::OnWaitOrTimerCallbackWrapper, &foo, std::placeholders::_1);
-    CreateTimerQueueTimerWrapper(&hTimer2, NULL, callback, foo, ParamData, NULL, 0, 2000, 0);
+    CreateTimerQueueTimerWrapper(&hTimer2, NULL, callback, foo, ParamData, NULL, 0, 1000, 0);
 
     MSG msg;
     BOOL isQuit = FALSE;
-    while (GetMessage(&msg, NULL, 0, 0)) {
+    while (GetMessage(&msg, GetConsoleWindow(), 0, 0)) {
         if (TranslateMessage(&msg)) {
-            if (msg.message == WM_QUIT ||
-                msg.message == WM_CLOSE) {
+            if (g_bExit ||
+                msg.message == WM_QUIT ||
+                msg.message == WM_CLOSE ||
+                msg.message == WM_DESTROY) {
                 printf("\nWill be quit!\n\n");
                 DispatchMessage(&msg);
                 break;
@@ -270,8 +274,44 @@ void run_unittest()
     // TODO:
 }
 
+BOOL CALLBACK CosonleHandler(DWORD event)
+{
+    BOOL bResult = FALSE;
+    switch (event) {
+    case CTRL_C_EVENT:
+        printf("Ctrl + C, exiting ...\n");
+        g_bExit = true;
+        PostMessage(GetConsoleWindow(), WM_QUIT, 0, 0);
+        Sleep(10000);
+        bResult = TRUE;
+        break;
+
+    case CTRL_BREAK_EVENT:
+        printf("Ctrl + Break, exiting ...\n");
+        g_bExit = true;
+        PostMessage(GetConsoleWindow(), WM_QUIT, 0, 0);
+        Sleep(10000);
+        bResult = TRUE;
+        break;
+
+    case CTRL_CLOSE_EVENT:
+        printf("Click close button, exiting ...\n");
+        g_bExit = true;
+        PostMessage(GetConsoleWindow(), WM_QUIT, 0, 0);
+        Sleep(10000);
+        bResult = TRUE;
+        break;
+
+    default:
+        break;
+    }
+    return bResult;
+}
+
 int main(int argn, char * argv[])
 {
+    SetConsoleCtrlHandler(CosonleHandler, TRUE);
+
 #if !defined(NDEBUG)
     run_unittest();
 #endif
