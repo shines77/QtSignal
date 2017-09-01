@@ -17,6 +17,11 @@
 #include "SignalStub.h"
 #include "Functional.h"
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
 enum signal_slots {
     OnValueChange,
     OnScrollChange
@@ -213,6 +218,43 @@ void run_unittest()
     // TODO:
 }
 
+BOOL WINAPI CosonleHandler(DWORD dwCtrlType)
+{
+    switch (dwCtrlType) {
+    case CTRL_C_EVENT:
+        printf("CosonleHandler::CTRL_C_EVENT\n");
+        break;
+    case CTRL_BREAK_EVENT:
+        printf("CosonleHandler::CTRL_BREAK_EVENT\n");
+        break;
+    case CTRL_CLOSE_EVENT:
+        printf("CosonleHandler::CTRL_CLOSE_EVENT\n");
+        break;
+    case CTRL_LOGOFF_EVENT:
+        printf("CosonleHandler::CTRL_LOGOFF_EVENT\n");
+        break;
+    case CTRL_SHUTDOWN_EVENT:
+        printf("CosonleHandler::CTRL_SHUTDOWN_EVENT\n");
+        break;
+    default:
+        printf("CosonleHandler:: Unknown ctrl type: %u.\n", dwCtrlType);
+        break;
+    }
+    return TRUE;
+}
+
+void integer_constant_test()
+{
+	int i1, i2, i3, i4, i5, i6;
+	i1 = -2147483647;
+	i2 = -2147483648;
+	i3 = -2147483649;
+	i4 = 2147483647;
+	i5 = 2147483648;
+	i6 = 2147483649;
+	printf("integer_constant_test()\n");
+}
+
 int main(int argn, char * argv[])
 {
     SetConsoleCtrlHandler(CosonleHandler, TRUE);
@@ -221,10 +263,18 @@ int main(int argn, char * argv[])
     run_unittest();
 #endif
 
+    integer_constant_test();
+
 #if 1
     test_signal();
     test_signal_stub();
 #endif
+
+    int i = 0;
+    for (;;) {
+        i++;
+    }
+    printf("i = %d\n", i);
 
 #if defined(_WIN32) && (defined(NDEBUG) || !defined(NDEBUG))
     ::system("pause");
